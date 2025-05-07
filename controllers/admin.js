@@ -116,13 +116,15 @@ const allMessages = TryCatch(async(req,res,next) => {
       attachments,
       content,
       createdAt,
-      chat: chat._id,
-      groupChat: chat.groupChat,
-      sender: {
-        _id: sender._id,
-        name: sender.name,
-        avatar: sender.avatar.url,
-      },
+      chat: chat?._id || null,
+      groupChat: chat?.groupChat || false,
+      sender: sender
+        ? {
+            _id: sender._id,
+            name: sender.name,
+            avatar: sender.avatar?.url || null,
+          }
+        : null
     })
   );
 
