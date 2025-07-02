@@ -27,7 +27,8 @@ dotenv.config(
 const MONGO_uri = process.env.MONGO_URI
 const port = process.env.PORT || 3000
 const adminSecretKey = process.env.ADMIN_SECRET_KEY || "adsasdsdfsdfsdfd";
-const envMode = process.env.NODE_ENV.trim() || "PRODUCTION";
+const envMode = (process.env.NODE_ENV || "PRODUCTION").trim();
+
 const userSocketIDs = new Map()
 const onlineUsers = new Set();
 
