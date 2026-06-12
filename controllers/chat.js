@@ -25,7 +25,7 @@ const newGroupChat = TryCatch(async (req , res , next) => {
 
   return res.status(201).json({
      success : true ,
-      message: "Group chat created"    
+      message: "Group created"    
   }
   )
 })
@@ -115,7 +115,7 @@ const addMembers = TryCatch(async(req, res, next)=>{
   chat.members.push(...uniqueMembers)
 
   if (chat.members.length > 50)
-    return next(new ErrorHandler("Group members limit reached", 400));
+    return next(new ErrorHandler("Group member limit reached (100 max)", 400));
 
   await chat.save()
 
@@ -131,7 +131,7 @@ const addMembers = TryCatch(async(req, res, next)=>{
 
   return res.status(200).json({
     success: true,
-    message: "Members added successfully",
+    message: "Members added",
     user : req.user
   });
 })
@@ -173,7 +173,7 @@ const removeMember = TryCatch(async(req, res, next)=>{
 
   return res.status(200).json({
     success: true,
-    message: "Member removed successfully",
+    message: "Member removed",
   });
 })
 
@@ -213,7 +213,7 @@ const leaveGroup = TryCatch(async(req, res, next)=>{
 
   return res.status(200).json({
     success: true,
-    message: "Leaved Group Successfully",
+    message: "Left the group",
   });
 })
 
@@ -223,9 +223,9 @@ const sendAttachments = TryCatch(async(req , res , next) => {
 
   const files = req.files || []
 
-  if(files.length < 1 ) return next(new ErrorHandler("Please Upload Attachments", 400));
+  if(files.length < 1 ) return next(new ErrorHandler("Please attach at least one file", 400));
 
-  if (files.length > 5) return next(new ErrorHandler("Files Can't be more than 5", 400));
+  if (files.length > 5) return next(new ErrorHandler("You can send at most 5 files at a time", 400));
 
   const [ chat , me ] = await Promise.all([
     Chat.findById(chatId),
@@ -323,7 +323,7 @@ const renameGroup = TryCatch( async (req, res , next) => {
 
   return res.status(200).json({
     success: true,
-    message: "Group renamed successfully",
+    message: "Group renamed",
   });
   
 })
@@ -369,7 +369,7 @@ await Promise.all([
 
   return res.status(200).json({
     success: true,
-    message: "Chat deleted successfully",
+    message: "Chat deleted",
   });
 })
 

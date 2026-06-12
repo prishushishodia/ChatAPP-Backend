@@ -18,7 +18,7 @@ const newUser = TryCatch(async(req , res ,next) => {
     const file = req.file; 
 
 
-    if (!file) return next(new ErrorHandler("Please Upload Avatar"));
+    if (!file) return next(new ErrorHandler("Please upload an avatar"));
 
     const result = await uploadFilesOnCloudinary([file])
 
@@ -35,7 +35,7 @@ const newUser = TryCatch(async(req , res ,next) => {
         avatar
     }) 
 
-    sendToken(res ,user , "user created" , 201 )
+    sendToken(res ,user , `Welcome to Threads, ${user.name}!` , 201 )
 })
 
 
@@ -44,19 +44,19 @@ const login = TryCatch(async (req , res , next) => {
 
     const user = await User.findOne({username}).select("+password")
 
-    if(!user) return next(new ErrorHandler ("invalid user" , 404))   
+    if(!user) return next(new ErrorHandler ("Invalid username or password" , 404))   
 
     const isMatch = await compare(password , user.password)
 
-    if(!isMatch) return next(new ErrorHandler ("invalid password" , 404)) 
+    if(!isMatch) return next(new ErrorHandler ("Invalid username or password" , 404)) 
 
-    sendToken(res , user , `welcome back ${user.name}` , 201)
+    sendToken(res , user , `Welcome back, ${user.name}!` , 201)
 });
 
 const getMyProfile = TryCatch(async(req, res, next)  => {
    
     const user = await User.findById(req.user);
-    if(!user) return next(new ErrorHandler("user not found" , 404))
+    if(!user) return next(new ErrorHandler("User not found" , 404))
 
     res.status(201).json({
         success: true,
@@ -128,7 +128,7 @@ const sendFriendRequest = TryCatch( async(req , res , next) => {
     }
     )
 
-    if(request) return next(new ErrorHandler("request already sent" , 400))
+    if(request) return next(new ErrorHandler("Friend request already sent" , 400))
 
      await Request.create({
             sender: req.user,
@@ -139,7 +139,7 @@ const sendFriendRequest = TryCatch( async(req , res , next) => {
 
     return res.status(200).json({
             success: true,
-            message: "Friend Request Sent",
+            message: "Friend request sent",
           });
 })
 
@@ -163,7 +163,7 @@ const acceptFriendRequest = TryCatch(async (req , res , next) => {
 
         return res.status(200).json({
             success: true,
-            message: "Friend Request Rejected",
+            message: "Friend request declined",
           });
       }
 
@@ -182,7 +182,7 @@ const acceptFriendRequest = TryCatch(async (req , res , next) => {
 
   return res.status(200).json({
     success: true,
-    message: "Friend Request Accepted",
+    message: "Friend request accepted",
     senderId: request.sender._id,
   });
 })
