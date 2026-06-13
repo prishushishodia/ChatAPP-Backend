@@ -1,6 +1,6 @@
 import { compare } from "bcrypt";
 import {User} from "../models/user.js"
-import { sendToken , cookieOptions, emitEvent, uploadFilesOnCloudinary} from "../utils/features.js";
+import { sendToken , cookieOptions, emitEvent, uploadFilesOnCloudinary, deletFilesFromCloudinary} from "../utils/features.js";
 import { TryCatch } from "../middlewares/error.js";
 import { ErrorHandler } from "../utils/utility.js";
 import { CONNECTED_TOKEN } from "../constants/config.js";
@@ -15,10 +15,14 @@ const newUser = TryCatch(async(req , res ,next) => {
 
     const {name , bio , username , password} = req.body
 
-    const file = req.file; 
+    const file = req.file;
 
 
-    if (!file) return next(new ErrorHandler("Please upload an avatar"));
+    if (!file) return next(new ErrorHandler("Please upload an avatar", 400));
+
+    // Fail before uploading if the username is taken, so we don't orphan a Cloudinary upload.
+    const existingUser = await User.findOne({ username });
+    if (existingUser) return next(new ErrorHandler("Username already taken", 409));
 
     const result = await uploadFilesOnCloudinary([file])
 
@@ -27,13 +31,20 @@ const newUser = TryCatch(async(req , res ,next) => {
         url: result[0].url,
     }
 
-    const user = await User.create({
-        name,
-        bio,
-        username,
-        password,
-        avatar
-    }) 
+    let user;
+    try {
+        user = await User.create({
+            name,
+            bio,
+            username,
+            password,
+            avatar
+        })
+    } catch (error) {
+        // Roll back the uploaded avatar if user creation fails (e.g. a race on the unique username).
+        await deletFilesFromCloudinary([avatar.public_id]);
+        throw error;
+    }
 
     sendToken(res ,user , `Welcome to Threads, ${user.name}!` , 201 )
 })
@@ -58,7 +69,7 @@ const getMyProfile = TryCatch(async(req, res, next)  => {
     const user = await User.findById(req.user);
     if(!user) return next(new ErrorHandler("User not found" , 404))
 
-    res.status(201).json({
+    res.status(200).json({
         success: true,
         user,
     })
@@ -98,7 +109,7 @@ const searchUser = TryCatch( async(req , res) => {
 
     const allUsersExceptMeAndFriends = await User.find(
         {
-            _id: { $nin: allUsersFromMyChats },
+            _id: { $nin: [...allUsersFromMyChats, req.user] },
             name: { $regex: name, $options:"i" },
         }
     )

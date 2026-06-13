@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken"
 import { TryCatch } from "./error.js"
 import { ErrorHandler } from "../utils/utility.js"
 import { CONNECTED_TOKEN } from "../constants/config.js"
-import { adminSecretKey } from "../app.js"
 import { User } from "../models/user.js"
 
 const isAuthenticated = TryCatch((req , res , next) => {
@@ -22,13 +21,11 @@ const adminOnly = TryCatch((req,res,next)=> {
     if (!token)
         return next(new ErrorHandler("Only Admin can access this route", 401));
 
-    const secretKey = jwt.verify(token , process.env.JWT_SECRET)
+    const decoded = jwt.verify(token , process.env.JWT_SECRET)
 
-    const isMatched = secretKey === adminSecretKey
-
-    if (!isMatched)
+    if (!decoded?.admin)
         return next(new ErrorHandler("Only Admin can access this route", 401));
-    
+
       next();
 })
 

@@ -14,7 +14,8 @@ const adminLogin = TryCatch(async(req, res, next) =>{
 
     if (!isMatched) return next(new ErrorHandler("Invalid admin key", 401));
 
-    const token = jwt.sign(secretKey , process.env.JWT_SECRET)
+    // Sign a role claim (not the secret itself) and give the session an expiry.
+    const token = jwt.sign({ admin: true } , process.env.JWT_SECRET, { expiresIn: "15h" })
 
     return res.status(200).cookie("connected-admin-token", token, {
       ...cookieOptions,
@@ -162,7 +163,8 @@ const getDashboardStats = TryCatch(async(req,res,next) => {
       (today.getTime() - message.createdAt.getTime()) / dayInMiliseconds;
     const index = Math.floor(indexApprox);
 
-    messages[6 - index]++;
+    // Guard against off-by-one at the window edges (index can be 7 or -1).
+    if (index >= 0 && index < 7) messages[6 - index]++;
   });
 
   const stats = {

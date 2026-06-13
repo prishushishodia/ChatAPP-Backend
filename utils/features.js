@@ -24,7 +24,7 @@ mongoose.connect(uri , {dbName: "CONNECTED"}).then(
 
 const sendToken = (res , user , message , status) => {
     
-   const token = jwt.sign({_id:user._id} , process.env.JWT_SECRET)
+   const token = jwt.sign({_id:user._id} , process.env.JWT_SECRET, { expiresIn: "15d" })
 
     return res.status(
         status).cookie(
@@ -76,9 +76,29 @@ const uploadFilesOnCloudinary = async (files = []) => {
     }
   };
 
-const deletFilesFromCloudinary = async (public_ids) => {
-    // Delete files from cloudinary
-  };
+const deletFilesFromCloudinary = async (public_ids = []) => {
+  if (!public_ids.length) return;
+
+  // Files are uploaded with resource_type "auto", and we only persist the
+  // public_id — so on delete we try each resource type until one matches.
+  const resourceTypes = ["image", "video", "raw"];
+
+  await Promise.all(
+    public_ids.map(async (public_id) => {
+      for (const resource_type of resourceTypes) {
+        try {
+          const { result } = await cloudinary.uploader.destroy(public_id, {
+            resource_type,
+          });
+          if (result === "ok") return;
+        } catch (error) {
+          // try the next resource type
+        }
+      }
+      console.warn(`Could not delete Cloudinary asset: ${public_id}`);
+    })
+  );
+};
   
 
 export {

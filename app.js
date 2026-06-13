@@ -13,6 +13,7 @@ import cors from "cors";
 import { corsOptions } from "./constants/config.js"
 import { v2 as cloudinary } from "cloudinary";
 import { socketAuthenticator  } from "./middlewares/auth.js"
+import { securityHeaders } from "./middlewares/security.js"
 import userRoutes from "./routes/user.js"
 import chatRoute from "./routes/chat.js"
 import adminRoute from "./routes/admin.js"
@@ -47,7 +48,9 @@ const io = new Server(server , {
 } )
 
 app.set("io", io);
+app.set("trust proxy", 1); // correct req.ip / secure cookies behind a proxy (e.g. Render)
 
+app.use(securityHeaders)
 app.use(express.json())
 app.use(cookieParser());
 app.use(cors(corsOptions))
@@ -104,7 +107,9 @@ io.on("connection", (socket) => {
         try {
             await Message.create(messageForDB)
         } catch (error) {
-            throw new Error(error)
+            // Don't re-throw: an unhandled rejection inside a socket handler
+            // can take down the whole process. Log and keep the connection alive.
+            console.error("Failed to persist message:", error)
         }
 
     })
@@ -146,6 +151,14 @@ app.use(errorMiddleware)
 
 server.listen(port , ()=>{
     console.log(`server is running on port ${port} in ${envMode} Mode`)
+})
+
+// Safety net: log instead of crashing on an otherwise-unhandled async error.
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled Rejection:", reason)
+})
+process.on("uncaughtException", (error) => {
+    console.error("Uncaught Exception:", error)
 })
 
 export {

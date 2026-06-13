@@ -4,12 +4,15 @@ import { singleAvatar } from "../middlewares/multer.js";
 import { isAuthenticated } from "../middlewares/auth.js";
 import { getMyProfile } from "../controllers/user.js";
 import { acceptRequestValidator, loginValidator, registerValidator, sendRequestValidator, validateHandler } from "../lib/validators.js";
+import { rateLimiter } from "../middlewares/security.js";
 
 const app = express.Router();
 
+// Throttle credential endpoints to blunt brute-force attempts.
+const authLimiter = rateLimiter({ windowMs: 15 * 60 * 1000, max: 20 });
 
-app.post("/login" ,loginValidator() , validateHandler,  login)
-app.post("/newuser" ,singleAvatar, registerValidator() , validateHandler, newUser)
+app.post("/login" , authLimiter, loginValidator() , validateHandler,  login)
+app.post("/newuser" , authLimiter, singleAvatar, registerValidator() , validateHandler, newUser)
 
 // now user need to be logged in to access routes
 

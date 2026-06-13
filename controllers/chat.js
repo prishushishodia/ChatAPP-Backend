@@ -13,15 +13,18 @@ const newGroupChat = TryCatch(async (req , res , next) => {
     const allMembers = [...members , req.user]
 
 
-  await Chat.create({
+  const chat = await Chat.create({
     name,
     groupChat: true,
     creator: req.user,
     members: allMembers,
   });
 
-  emitEvent(req , ALERT , allMembers , `welcome to ${name} group `)
-  emitEvent (req , REFETCH_CHATS , members)
+  emitEvent(req, ALERT, allMembers, {
+    chatId: chat._id,
+    message: `Welcome to ${name} group`,
+  })
+  emitEvent(req, REFETCH_CHATS, allMembers)
 
   return res.status(201).json({
      success : true ,
@@ -61,9 +64,9 @@ const getMyChats = TryCatch(async (req , res , next) => {
 
     }
   })
-return res.status(201).json({
+return res.status(200).json({
    success : true ,
-   chats: transformedChats   
+   chats: transformedChats
 }
 )
 })
@@ -114,17 +117,17 @@ const addMembers = TryCatch(async(req, res, next)=>{
 
   chat.members.push(...uniqueMembers)
 
-  if (chat.members.length > 50)
-    return next(new ErrorHandler("Group member limit reached (100 max)", 400));
+  if (chat.members.length > 100)
+    return next(new ErrorHandler("Group can have at most 100 members", 400));
 
   await chat.save()
 
   const allUsersName = allNewMembers.map((i)=> i.name).join(",")
 
-  emitEvent( req,
-    ALERT,
-    chat.members,
-    `${allUsersName} has been added in the group`)
+  emitEvent(req, ALERT, chat.members, {
+    chatId,
+    message: `${allUsersName} added to the group`,
+  })
 
     emitEvent(req, REFETCH_CHATS, chat.members);
 
@@ -167,7 +170,10 @@ const removeMember = TryCatch(async(req, res, next)=>{
 
   await chat.save()
 
-  emitEvent(req, ALERT, chat.members,`${userThatWillBeRemoved.name} has been removed from the group`);
+  emitEvent(req, ALERT, chat.members, {
+    chatId,
+    message: `${userThatWillBeRemoved.name} was removed from the group`,
+  });
 
   emitEvent(req, REFETCH_CHATS, allChatMembers);
 
@@ -272,7 +278,7 @@ const getChatDetails = TryCatch( async (req, res , next) => {
 
   if(req.query.populate === "true"){
     const chat = await Chat.findById(req.params.id).populate(
-      "members" , "name , avatar"
+      "members" , "name avatar"
     ).lean()
 
     if (!chat) return next(new ErrorHandler("Chat not found", 404));
@@ -355,9 +361,9 @@ const deleteChat = TryCatch( async (req, res , next) => {
   )
   const public_ids = [];
 
-  messageWithAttachments.forEach(({attachments}) => 
-  attachments.forEach((public_id) => public_ids.push(public_id)
-));
+  messageWithAttachments.forEach(({ attachments }) =>
+    attachments.forEach(({ public_id }) => public_ids.push(public_id))
+  );
 
 await Promise.all([
   deletFilesFromCloudinary(public_ids),
